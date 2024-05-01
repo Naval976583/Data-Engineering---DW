@@ -6,6 +6,7 @@ import time
 from urllib.parse import urlencode
 
 logging.captureWarnings(True)
+from . import convert_json_to_parquet
 
 test_api_url = "https://github.com/Naval976583?tab=projects"  # Update the API endpoint as needed
 
@@ -51,22 +52,31 @@ def get_new_token():
     return access_token
 
 
-# 	obtain a token before calling the API for the first time
+# obtain a token before calling the API for the first time
+
+
+# api_url -> put the url of api in this key
+# location_of_table_to_store -> put the file path of table to store here
+api_to_table_mapping = {
+    'api_url': 'location_of_table_to_store'
+}
+
 
 token = get_new_token()
-cnt = 3
 while True:
-    if cnt == 0:
-        print("Could Not Get Valid Token")
-        break
     api_call_headers = {'Authorization': 'Bearer ' + token}
-    api_call_response = requests.get(test_api_url, headers=api_call_headers)
-    if api_call_response.status_code == 401:
-        token = get_new_token()
-        cnt -= 1
-    else:
-        print(api_call_response.text)
-        print("Successfully Executed")
-        sys.exit(0)
+    i = 1
+    for api in api_to_table_mapping:
+        api_call_response = requests.get(test_api_url, headers=api_call_headers) # replace test_api_url with api and store api_call_response as json in api key value location
+        with open(f"data{i}.json", "w") as f:
+            json.dump(api_call_response, f)
+        if api_call_response.status_code == 401:
+            token = get_new_token()
+            print("Invalid Token")
+            sys.exit(1)
+        else:
+            convert_json_to_parquet.convert_json_to_parquet()
+            print("Successfully Executed")
 
-    time.sleep(30)
+        i += 1
+        time.sleep(30)
