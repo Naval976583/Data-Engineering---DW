@@ -18,4 +18,4 @@ parquet_output_path = "updated_table.parquet"
 
 flattened_data.to_parquet('updated_table.parquet', index=False)
 
-print(flattened_data)
+
