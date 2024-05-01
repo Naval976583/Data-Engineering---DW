@@ -11,12 +11,12 @@
       "qualified": false,
       "rules": [
         {
-          "name": "name of rule 1",
+          "rule_name": "name of rule 1",
           "approved": true,
           "details": {}
         },
         {
-          "name": "name of rule 2",
+          "rule_name": "name of rule 2",
           "approved": false,
           "details": {}
         }
@@ -29,12 +29,12 @@
       "qualified": true,
       "rules": [
         {
-          "name": "name of rule 1",
+          "rule_name": "name of rule 1",
           "approved": true,
           "details": {}
         },
         {
-          "name": "name of rule 2",
+          "rule_name": "name of rule 2",
           "approved": false,
           "details": {}
         }
