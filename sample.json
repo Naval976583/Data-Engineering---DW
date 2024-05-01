@@ -1,0 +1,44 @@
+{
+  "user_id": 1,
+  "rec_id": 2,
+  "uut": 12,
+  "hash": "abc123",
+  "qualify": [
+    {
+      "offer": "offer-1",
+      "name": "test-1",
+      "hash": "cab321",
+      "qualified": false,
+      "rules": [
+        {
+          "name": "name of rule 1",
+          "approved": true,
+          "details": {}
+        },
+        {
+          "name": "name of rule 2",
+          "approved": false,
+          "details": {}
+        }
+      ]
+    },
+    {
+      "offer": "offer-2",
+      "name": "test-2",
+      "hash": "cab123",
+      "qualified": true,
+      "rules": [
+        {
+          "name": "name of rule 1",
+          "approved": true,
+          "details": {}
+        },
+        {
+          "name": "name of rule 2",
+          "approved": false,
+          "details": {}
+        }
+      ]
+    }
+  ]
+}
