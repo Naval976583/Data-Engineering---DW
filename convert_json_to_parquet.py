@@ -3,7 +3,8 @@
 import os
 import json
 import pandas as pd
-
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import desc, date_format
 
 # Function to process JSON file and save as Parquet
 def convert_json_to_parquet():
@@ -49,7 +50,7 @@ def convert_json_to_parquet():
 
     # Function to combine Parquet files into one
     def combine_parquet_files(input_folder="kamalyesh-test/parq_dir/parquet_files",
-                              output_file="kamalyesh-test/parq_dir/output"):
+                              output_file="kamalyesh-test/parq_dir/output/combined.parquet"):
         spark = SparkSession.builder.getOrCreate()
         # Read all Parquet files from the input folder
         df = spark.read.option("mergeSchema", "true").parquet(input_folder)
@@ -61,3 +62,33 @@ def convert_json_to_parquet():
 
     # Example usage
     combine_parquet_files()
+    
+# Create a SparkSession
+spark = SparkSession.builder \
+    .appName("Fetch Last Uploaded Data from Parquet Table") \
+    .getOrCreate()
+
+df = spark.read.parquet("kamalyesh-test/parq_dir/output/combined parquet.parquet")
+
+# Check if the DataFrame is empty
+if df.count() > 0:
+    # Sort the DataFrame by timestamp column in descending order
+    sorted_df = df.orderBy(desc("timestamp_column"))
+    
+    # Format the timestamp column to "yyyy-MM-dd'T'HH:mm:ss.SS'Z'" format
+    sorted_df = sorted_df.withColumn("formatted_timestamp", date_format("timestamp_column", "yyyy-MM-dd'T'HH:mm:ss.SS'Z'"))
+    
+    # Get the first row to fetch the last uploaded data
+    last_uploaded_data = sorted_df.select("*").first()
+    
+    # Retrieve only the formatted timestamp
+    formatted_timestamp = last_uploaded_data.formatted_timestamp
+    
+    # Print the formatted timestamp
+    print("Formatted Timestamp:", formatted_timestamp)
+else:
+    # If DataFrame is empty, print an empty string
+    print("Last Uploaded Data: <empty>")
+
+# Stop the SparkSession
+spark.stop()
