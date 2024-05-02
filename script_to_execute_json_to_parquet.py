@@ -6,7 +6,7 @@ import time
 from urllib.parse import urlencode
 
 logging.captureWarnings(True)
-from . import convert_json_to_parquet
+import convert_json_to_parquet
 
 test_api_url = "https://github.com/Naval976583?tab=projects"  # Update the API endpoint as needed
 
