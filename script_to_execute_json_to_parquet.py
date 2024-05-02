@@ -4,9 +4,9 @@ import json
 import logging
 import time
 from urllib.parse import urlencode
+import convert_json_to_parquet
 
 logging.captureWarnings(True)
-import convert_json_to_parquet
 
 test_api_url = "https://github.com/Naval976583?tab=projects"  # Update the API endpoint as needed
 
@@ -58,28 +58,32 @@ def get_new_token():
 # api_url -> put the url of api in this key
 # location_of_table_to_store -> put the file path of table to store here
 api_to_table_mapping = {
-    '{{base_url}}/v2/CARCDP/CDP_Tags/?$skip=300': 'location_of_table_to_store'
+    '{base_url}/v2/CARCDP/CDP_Tags/?$skip={n}': 'location_of_table_to_store'
 }
 
 token = get_new_token()
 while True:
-    api_call_headers = {'Authorization': 'Bearer ' + token, 'Accept': '*/*', 'Accept-Encoding': 'gzip,deflate,br','Connection': 'keep-alive',
+    api_call_headers = {'Authorization': 'Bearer ' + token, 'Accept': '*/*', 'Accept-Encoding': 'gzip,deflate,br',
+                        'Connection': 'keep-alive',
                         'SPFConfigUID': 'PL_Canmore',
                         'SPFIgnoreConfig': 'true', 'SPFIgnoreEffectivity': 'true', 'Prefer': 'odata.maxpagesize=10'
                         }
     i = 1
     for api_url in api_to_table_mapping:
-        api_call_response = requests.get(api_url,
-                                         headers=api_call_headers)  # replace test_api_url with api and store api_call_response as json in api key value location
-        with open(f"data{i}.json", "w") as f:
-            json.dump(api_call_response, f)
-        if api_call_response.status_code == 401:
-            token = get_new_token()
-            print("Invalid Token")
-            sys.exit(1)
-        else:
-            convert_json_to_parquet.convert_json_to_parquet()
-            print("Successfully Executed")
+        skip_limit = 500  # set this limit as per your requirement
+        base_url = ''  # replace with actual base_url
+        for n in range(100, skip_limit + 1, 100):
+            api_call_response = requests.get(api_url.format(base_url, n),
+                                             headers=api_call_headers)  # replace test_api_url with api and store api_call_response as json in api key value location
+            with open(f"data{i}.json", "w") as f:
+                json.dump(api_call_response, f)
+            if api_call_response.status_code == 401:
+                token = get_new_token()
+                print("Invalid Token")
+                sys.exit(1)
+            else:
+                convert_json_to_parquet.convert_json_to_parquet()
+                print("Successfully Executed")
 
         i += 1
         time.sleep(30)
