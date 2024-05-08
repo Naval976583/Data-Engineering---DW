@@ -16,7 +16,7 @@ logging.captureWarnings(True)
 def get_file(hdfs_file_path, target_location):
     spark = SparkSession.builder.getOrCreate()
 
-    df = spark.read.parquet(hdfs_file_path)
+    df = spark.read.json(hdfs_file_path)
 
     output_folder = target_location
 
