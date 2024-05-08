@@ -20,7 +20,7 @@ def get_file(hdfs_file_path, target_location):
 
     output_folder = target_location
 
-    df.write.save(output_folder, format = 'parquet', mode = 'append')
+    df.write.save(output_folder, format = 'json', mode = 'append')
     # Display the contents of the DataFrame
     df.show()
 
