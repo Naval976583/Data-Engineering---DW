@@ -1,7 +1,6 @@
 # Updated code JSON to Parquet
 
 import os
-import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import desc, date_format
 import sys
@@ -14,55 +13,105 @@ from urllib.parse import urlencode
 logging.captureWarnings(True)
 
 
+def get_file(hdfs_file_path, target_location):
+    spark = SparkSession.builder.getOrCreate()
+
+    df = spark.read.parquet(hdfs_file_path)
+
+    output_folder = target_location
+
+    df.write.save(output_folder, format = 'parquet', mode = 'append')
+    # Display the contents of the DataFrame
+    df.show()
+
+get_file()
+
 # Function to process JSON file and save as Parquet
-def convert_json_to_parquet():
-    def process_json(json_file_path, output_folder):
+def process_json(json_file_path, output_folder):   
+    spark = SparkSession.builder.getOrCreate()
+    df = spark.read.option("multiline", "true").json("timestamp_testing/input_json/employees_1_testing.json")
+    exploded_df = df \
+    .select(col(""), col(""), col("")) #Put the column names of the json data
 
-        with open(json_file_path, 'r') as file:
-            data = json.load(file)
+    #If you want to see the converted data
+    exploded_df.show()
 
-        flattened_data = pd.json_normalize(data)
-        output_folder_path = os.path.join(output_folder, "parquet_files")
-        os.makedirs(output_folder_path, exist_ok=True)
-        parquet_output_path = os.path.join(output_folder_path, os.path.splitext(os.path.basename(json_file_path))[0] + '.parquet')
-        flattened_data.to_parquet(parquet_output_path, index=False)
-        print(f"Processed: {json_file_path} -> Saved as: {parquet_output_path}")
+    exploded_df.write.parquet('t1.parquet')  
 
-    json_files_directory = "input_json"  # Input path of the JSON file
+process_json()
 
-    output_folder = ""  # Folder where the converted parquet file will be stored 
+def combine_parquet_files(input_folder="parquet_files",  # Input folder for merging all the parquet files
+                            output_file="combined.parquet"):  # folder in which combined file will be stored
+    spark = SparkSession.builder.getOrCreate()
+    df = spark.read.option("mergeSchema", "true").parquet(input_folder)
+    df.write.mode('overwrite').parquet(output_file)
+    print(f"Combined Parquet file written to: {output_file}")
 
-    for file_name in os.listdir(json_files_directory):
-        if file_name.endswith('.json'):
-            json_file_path = os.path.join(json_files_directory, file_name)
-            process_json(json_file_path, output_folder)
+combine_parquet_files()
 
-    def combine_parquet_files(input_folder="parquet_files",  # Input folder for merging all the parquet files
-                              output_file="combined.parquet"):  # folder in which combined file will be stored
-        spark = SparkSession.builder.getOrCreate()
-        df = spark.read.option("mergeSchema", "true").parquet(input_folder)
-        df.write.mode('overwrite').parquet(output_file)
-        print(f"Combined Parquet file written to: {output_file}")
+def timestamp_format():
+    spark = SparkSession.builder.getOrCreate()
 
-    combine_parquet_files()
+    df = spark.read.parquet("combined.parquet/confirm.parquet")  # Combined parquet file path
+    if df.count() > 0:
+        sorted_df = df.orderBy(desc("timestamp"))
+        sorted_df = sorted_df.withColumn("formatted_timestamp",
+                                            date_format("timestamp", "yyyy-MM-dd'T'HH:mm:ss.SS'Z'"))
+        last_uploaded_data = sorted_df.select("*").first()
+        formatted_timestamp = last_uploaded_data.formatted_timestamp
+        print("Formatted Timestamp:", formatted_timestamp)
+    else:
+        print("Last Uploaded Data: <empty>")
+    spark.stop()
 
-    def timestamp_format():
-        spark = SparkSession.builder.getOrCreate()
+timestamp_format()
 
-        df = spark.read.parquet("combined.parquet/confirm.parquet")  # Combined parquet file path
-        if df.count() > 0:
-            sorted_df = df.orderBy(desc("timestamp"))
-            sorted_df = sorted_df.withColumn("formatted_timestamp",
-                                             date_format("timestamp", "yyyy-MM-dd'T'HH:mm:ss.SS'Z'"))
-            last_uploaded_data = sorted_df.select("*").first()
-            formatted_timestamp = last_uploaded_data.formatted_timestamp
-            print("Formatted Timestamp:", formatted_timestamp)
-        else:
-            print("Last Uploaded Data: <empty>")
-        spark.stop()
+def put_file(hdfs_file_path, target_location):
+    spark = SparkSession.builder.getOrCreate()
 
-    timestamp_format()
-    
+    df = spark.read.option("multiline", "true").parquet(target_location)
+
+    output_folder = hdfs_file_path
+
+    df.write.save(output_folder, format = 'parquet', mode = 'append')
+
+    # Display the contents of the DataFrame
+    df.show()
+
+put_file()
+
+def upsert():
+    from pyspark.sql import SparkSession
+    spark = SparkSession.builder.getOrCreate()
+    parq_path = "parq_dir"
+    df = spark.read.parquet(parq_path)
+    df.createOrReplaceTempView('data')
+    update_query = "INSERT INTO data (user_id) VALUES (50)"
+    spark.sql(update_query)
+    output_parquet_path = "output.parquet"
+    df.write.mode('overwrite').parquet(output_parquet_path)
+
+upsert()
+
+""""
+Need to specify the column name which we want to update 
+MERGE INTO data AS t
+USING data2 AS s
+ON t.user_id = s.user_id
+    AND t.rec_id = s.rec_id
+    AND t.uut = s.uut
+    AND t.hash_x = s.hash_x
+WHEN MATCHED THEN
+    UPDATE SET
+        t.offer = s.offer,
+        t.name = s.name,
+        t.hash_y = s.hash_y,
+        t.qualified = s.qualified,
+        t.rules = s.rules,
+WHEN NOT MATCHED THEN
+    INSERT (user_id, rec_id, uut, hash_x, offer, name, hash_y, qualified, rules)
+    VALUES (s.user_id, s.rec_id, s.uut, s.hash_x, s.offer, s.name, s.hash_y, s.qualified, s.rules);
+"""
 
 test_api_url = "https://github.com/Naval976583?tab=projects"  # Update the API endpoint as needed
 
@@ -138,7 +187,7 @@ while True:
                 print("Invalid Token")
                 sys.exit(1)
             else:
-                convert_json_to_parquet()
+                process_json()
                 print("Successfully Executed")
 
         i += 1
